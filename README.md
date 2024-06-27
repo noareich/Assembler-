@@ -11,6 +11,12 @@ Download GitHub Desktop:
 git clone https://github.com/noareich/Assembler-
 
 
+Create new Barnch:
+1. Use git desktop
+   
+3. commit your changes
+4. ![image](https://github.com/noareich/Assembler-/assets/150137134/71beb80a-9072-471b-a334-6f89a1619254)
 
+5. push to gitHub 
 
 
