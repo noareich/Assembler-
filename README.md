@@ -8,7 +8,7 @@ Download GitHub Desktop:
     https://desktop.github.com/
 
 
-git clone [text](https://github.com/noareich/Assembler-)
+git clone https://github.com/noareich/Assembler-
 
 
 
