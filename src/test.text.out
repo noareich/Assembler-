@@ -1,0 +1,5 @@
+START:   MOV  R1, 100
+         ADD  R2, R1
+         JMP  END
+         SUB  R1, 1     
+END:     STOP
