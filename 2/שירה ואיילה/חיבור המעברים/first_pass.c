@@ -297,8 +297,7 @@ void handle_extern_directive(AssemblerState* state, const char* label) {
 
     strncpy(state->extern_table[state->extern_count].name, label, MAX_LABEL_LENGTH);
     state->extern_table[state->extern_count].name[MAX_LABEL_LENGTH] = '\0';
-    state->extern_table[state->extern_count].address = -1;  /* Initialize addresses to NULL */    
-    state->extern_count++;
+state->extern_table[state->extern_count].addresses = NULL;  /* Initialize addresses to NULL */    state->extern_count++;
 }
 int is_single_operand_instruction(const char *op) {
     const char *single_operand_instructions[] = {
@@ -580,6 +579,7 @@ void process_line(AssemblerState* state, char* line) {
     char *op = NULL;
     char *operand1 = NULL;
     char *operand2 = NULL;
+   
 
     // בדיקת אורך שורה
     if (!check_line_length(line)) {
@@ -689,20 +689,12 @@ void process_line(AssemblerState* state, char* line) {
             }
         }
 
-        // בדיקת הוראת STOP
-        /*if (strcmp(op, "stop") == 0) {
-            if (state->stop_encountered) {
-                fprintf(stderr, "שגיאה: הוראת STOP כבר הופיעה בקוד\n");
-                return;
-            }
-            state->stop_encountered = true;
-        }*/
-
+       
         // הרכבת ההוראה
         assemble_instruction(state, label, op, operand1, operand2);
     }
 
-    //state->line_count++;
+
 }
 
 void first_pass(AssemblerState* state, const char* filename) {
@@ -784,8 +776,8 @@ void print_extern_table(AssemblerState* state) {
     printf("Name\tAddress\n");
     for (int i = 0; i < state->extern_count; i++) {
 printf("%s\t", state->extern_table[i].name);
-if (state->extern_table[i].address != -1) {
-    printf("%04d", state->extern_table[i].address);
+if (state->extern_table[i].addresses != NULL) {
+    printf("%04d", state->extern_table[i].addresses[0]);
 } else {
     printf("N/A");
 }

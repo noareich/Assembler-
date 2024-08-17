@@ -45,8 +45,10 @@ typedef struct {
 
 typedef struct {
     char name[MAX_LABEL_LENGTH + 1];
-    int address;
+    int *addresses;  // Array of addresses
+    int address_count;  // Number of addresses
 } ExternLabel;
+;
 
 typedef struct {
     char* name;

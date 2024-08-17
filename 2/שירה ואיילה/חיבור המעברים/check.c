@@ -74,9 +74,9 @@ bool is_reserved_word(const char* word) {
 /**
  * Checks if the label is already defined in the assembly state
  */
-bool is_duplicate_label(const char* label, const AssemblyState* state) {
+bool is_duplicate_label(const char* label, const AssemblerState* state) {
     for (int i = 0; i < state->label_count; i++) {
-        if (strcmp(state->labels[i].name, label) == 0) {
+        if (strcmp(state->label_table[i].name, label) == 0) {
             return true;
         }
     }
@@ -183,13 +183,13 @@ bool is_valid_addressing_mode(const char* instruction, const char* operand, bool
 /**
  * Adds a label to the assembly state
  */
-void add_label_for_check(AssemblyState* state, const char* name, int address) {
+void add_label_for_check(AssemblerState* state, const char* name, int address) {
     if (state->label_count < MAX_LABELS) {
-        strncpy(state->labels[state->label_count].name, name, MAX_LABEL_LENGTH);
-        state->labels[state->label_count].name[MAX_LABEL_LENGTH] = '\0';
-        state->labels[state->label_count].address = address;
-        state->labels[state->label_count].is_extern = false;
-        state->labels[state->label_count].is_entry = false;
+        strncpy(state->label_table[state->label_count].name, name, MAX_LABEL_LENGTH);
+        state->label_table[state->label_count].name[MAX_LABEL_LENGTH] = '\0';
+        state->label_table[state->label_count].address = address;
+        state->label_table[state->label_count].is_extern = false;
+        state->label_table[state->label_count].is_entry = false;
         state->label_count++;
     }
 }
@@ -197,9 +197,9 @@ void add_label_for_check(AssemblyState* state, const char* name, int address) {
 /**
  * Checks if a label exists in the assembly state
  */
-bool label_exists(const AssemblyState* state, const char* name) {
+bool label_exists(const AssemblerState* state, const char* name) {
     for (int i = 0; i < state->label_count; i++) {
-        if (strcmp(state->labels[i].name, name) == 0) {
+        if (strcmp(state->label_table[i].name, name) == 0) {
             return true;
         }
     }
@@ -222,21 +222,23 @@ bool is_valid_entry_label(const char* label) {
 /**
  * Checks if the entry label is defined in the assembly state
  */
-bool is_entry_label_defined(const AssemblyState* state, const char* label) {
+bool is_entry_label_defined(const AssemblerState* state, const char* label) {
     return label_exists(state, label);
 }
 
 /**
  * Checks if the extern label is not defined in the assembly state
  */
-bool is_extern_label_not_defined(const AssemblyState* state, const char* label) {
+bool is_extern_label_not_defined(const AssemblerState* state, const char* label) {
     return !label_exists(state, label);
 }
 
 /**
  * Analyzes a single line of assembly code
- */
-void analyze_line(const char* line, int line_number, AssemblyState* state) {
+ **/
+
+ /*
+void analyze_line(const char* line, int line_number, AssemblerState* state) {
     char copy_line[MAX_LINE_LENGTH + 1];
     strncpy(copy_line, line, MAX_LINE_LENGTH);
     copy_line[MAX_LINE_LENGTH] = '\0';
@@ -371,38 +373,5 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
     }
 
     state->line_count++;
-}
+} */
 
-/**
- * Main function - analyzes the input file
- */
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
-        return 1;
-    }
-
-    FILE* file = fopen(argv[1], "r");
-    if (file == NULL) {
-        perror("Error opening file");
-        return 1;
-    }
-
-    AssemblyState state = {0};
-    char line[MAX_LINE_LENGTH + 1];
-    int line_number = 0;
-
-    while (fgets(line, sizeof(line), file)) {
-        line_number++;
-        line[strcspn(line, "\n")] = 0;
-        analyze_line(line, line_number, &state);
-    }
-
-    fclose(file);
-
-    if (!state.stop_encountered) {
-        printf("Error: STOP instruction not found in the code\n");
-    }
-
-    return 0;
-}
