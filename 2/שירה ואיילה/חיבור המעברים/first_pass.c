@@ -575,11 +575,12 @@ state->memory_capacity * sizeof(Instruction);
     }
 }
 void process_line(AssemblerState* state, char* line) {
+ 
     char *label = NULL;
     char *op = NULL;
     char *operand1 = NULL;
     char *operand2 = NULL;
-    
+
     // בדיקת אורך שורה
     if (!check_line_length(line)) {
         fprintf(stderr, "שגיאה: אורך השורה חורג מהמותר\n");
@@ -614,7 +615,7 @@ void process_line(AssemblerState* state, char* line) {
             fprintf(stderr, "שגיאה: הגדרה כפולה של תווית\n");
             return;
         }
-        add_label(state, label, state->IC);
+        //add_label(state, label, state->IC);
         token = strtok(NULL, " \t");
         if (token == NULL) return;
     }
