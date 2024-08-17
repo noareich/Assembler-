@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "utils.h": "c",
+        "string.h": "c",
+        "*.c ": "c",
+        "first_pass.h": "c",
+        "second_pass.h": "c",
+        "assembler.h": "c",
+        "stdlib.h": "c",
+        "assembler_checks.h": "c",
+        "errno.h": "c",
+        "ctype.h": "c"
+    }
+}
