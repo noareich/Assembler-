@@ -8,45 +8,14 @@
 
 #include "check.h"
 
-#define MAX_LINE_LENGTH 81
-#define MAX_LABEL_LENGTH 31
-#define MAX_LABELS 1000
 
-typedef struct {
-    char name[MAX_LABEL_LENGTH + 1];
-    int address;
-    bool is_external;
-    bool is_entry;
-} Label;
 
-typedef struct {
-    Label labels[MAX_LABELS];
-    int label_count;
-    bool stop_encountered;
-    int line_count;
-} AssemblyState;
 
-const char* reserved_words[] = {"mov", "cmp", "add", "sub", "lea", "clr", "not", "inc", "dec", "jmp", "bne", "red", "prn", "jsr", "rts", "stop"};
-const int num_reserved_words = sizeof(reserved_words) / sizeof(reserved_words[0]);
 
-// Function prototypes
-bool check_line_length(const char* line);
-bool is_empty_or_whitespace(const char* line);
-bool is_valid_comment(const char* line);
-bool is_valid_label(const char* label);
-bool is_reserved_word(const char* word);
-bool is_duplicate_label(const char* label, const AssemblyState* state);
-bool is_valid_instruction(const char* instruction);
-bool is_valid_immediate(const char* operand);
-bool check_operand_count(const char* instruction, int operand_count);
-bool is_valid_operand(const char* operand);
-bool is_valid_addressing_mode(const char* instruction, const char* operand, bool is_source);
-void add_label(AssemblyState* state, const char* name, int address);
-bool label_exists(const AssemblyState* state, const char* name);
-void analyze_line(const char* line, int line_number, AssemblyState* state);
-bool is_valid_entry_label(const char* label);
-bool is_entry_label_defined(const AssemblyState* state, const char* label);
-bool is_extern_label_not_defined(const AssemblyState* state, const char* label);
+
+const char* reserved_words_list[] = {"mov", "cmp", "add", "sub", "lea", "clr", "not", "inc", "dec", "jmp", "bne", "red", "prn", "jsr", "rts", "stop"};
+const int num_reserved_words = sizeof(reserved_words_list) / sizeof(reserved_words_list[0]);
+
 
 /**
  * Checks if the line length is valid (<=MAX_LINE_LENGTH)
@@ -96,7 +65,7 @@ bool is_valid_label(const char* label) {
  */
 bool is_reserved_word(const char* word) {
     for (int i = 0; i < num_reserved_words; i++) {
-        if (strcmp(word, reserved_words[i]) == 0)
+        if (strcmp(word, reserved_words_list[i]) == 0)
             return true;
     }
     return false;
@@ -214,12 +183,12 @@ bool is_valid_addressing_mode(const char* instruction, const char* operand, bool
 /**
  * Adds a label to the assembly state
  */
-void add_label(AssemblyState* state, const char* name, int address) {
+void add_label_for_check(AssemblyState* state, const char* name, int address) {
     if (state->label_count < MAX_LABELS) {
         strncpy(state->labels[state->label_count].name, name, MAX_LABEL_LENGTH);
         state->labels[state->label_count].name[MAX_LABEL_LENGTH] = '\0';
         state->labels[state->label_count].address = address;
-        state->labels[state->label_count].is_external = false;
+        state->labels[state->label_count].is_extern = false;
         state->labels[state->label_count].is_entry = false;
         state->label_count++;
     }
@@ -325,7 +294,7 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
             printf("Error in line %d: Duplicate label definition\n", line_number);
             return;
         }
-        add_label(state, label, line_number);
+        add_label_for_check(state, label, line_number);
         token = strtok(NULL, " \t");
         if (token == NULL) return;
     }

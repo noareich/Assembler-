@@ -2,7 +2,7 @@
  * קובץ: assembler.c
  * תיאור: מימוש של אסמבלר לשפת אסמבלי דמיונית עם הקצאה דינמית ללא משתנים גלובליים
  */
-
+#include "check.h"
 #include "assembler.h"
 
 
@@ -297,7 +297,7 @@ void handle_extern_directive(AssemblerState* state, const char* label) {
 
     strncpy(state->extern_table[state->extern_count].name, label, MAX_LABEL_LENGTH);
     state->extern_table[state->extern_count].name[MAX_LABEL_LENGTH] = '\0';
-state->extern_table[state->extern_count].addresses = NULL;  /* Initialize addresses to NULL */    state->extern_count++;
+state->extern_table[state->extern_count].address = NULL;  /* Initialize addresses to NULL */    state->extern_count++;
 }
 int is_single_operand_instruction(const char *op) {
     const char *single_operand_instructions[] = {
@@ -574,31 +574,62 @@ state->memory_capacity * sizeof(Instruction);
     }
 }
 void process_line(AssemblerState* state, char* line) {
- 
     char *label = NULL;
     char *op = NULL;
     char *operand1 = NULL;
     char *operand2 = NULL;
-    char *token = strtok(line, " \t");
-
-    if (token == NULL)
+    
+    // בדיקת אורך שורה
+    if (!check_line_length(line)) {
+        fprintf(stderr, "שגיאה: אורך השורה חורג מהמותר\n");
         return;
-
-    if (strchr(token, ':') != NULL) {
-        label = token;
-        label[strlen(label) - 1] = '\0';
-        token = strtok(NULL, " \t");
     }
 
-    if (token == NULL)
+    // הסרת רווחים מתחילת וסוף השורה
+    char* trimmed_line = trim(line);
+
+    // בדיקה אם השורה ריקה או הערה
+    if (is_empty_or_whitespace(trimmed_line) || is_valid_comment(trimmed_line)) {
         return;
+    }
+
+    char *token = strtok(trimmed_line, " \t");
+    if (token == NULL) return;
+
+    // בדיקת תווית
+    if (strchr(token, ':') != NULL) {
+        label = token;
+        label[strlen(label) - 1] = '\0';  // הסרת הנקודותיים
+        
+        if (!is_valid_label(label)) {
+            fprintf(stderr, "שגיאה: תווית לא חוקית\n");
+            return;
+        }
+        if (is_reserved_word(label)) {
+            fprintf(stderr, "שגיאה: שימוש במילה שמורה כתווית\n");
+            return;
+        }
+        if (is_duplicate_label(label, state)) {
+            fprintf(stderr, "שגיאה: הגדרה כפולה של תווית\n");
+            return;
+        }
+        add_label(state, label, state->IC);
+        token = strtok(NULL, " \t");
+        if (token == NULL) return;
+    }
 
     op = token;
+
+    // בדיקת תקינות ההוראה
+    if (!is_valid_instruction(op)) {
+        fprintf(stderr, "שגיאה: הוראה לא חוקית\n");
+        return;
+    }
+
+    // טיפול בהוראות מיוחדות
     if (op[0] == '.') {
         operand1 = strtok(NULL, "");
-
-        if (operand1)
-            operand1 = trim(operand1);
+        if (operand1) operand1 = trim(operand1);
 
         if (strcmp(op, ".data") == 0) {
             handle_data_directive(state, label ? label : "", operand1);
@@ -616,16 +647,56 @@ void process_line(AssemblerState* state, char* line) {
             handle_extern_directive(state, operand1);
         }
     } else {
+        // טיפול בהוראות רגילות
         operand1 = strtok(NULL, ",");
         operand2 = strtok(NULL, "");
 
-        if (operand1)
-            operand1 = trim(operand1);
-        if (operand2)
-            operand2 = trim(operand2);
+        if (operand1) operand1 = trim(operand1);
+        if (operand2) operand2 = trim(operand2);
 
+        int operand_count = 0;
+        if (operand1) operand_count++;
+        if (operand2) operand_count++;
+
+        // בדיקת מספר האופרנדים
+        if (!check_operand_count(op, operand_count)) {
+            fprintf(stderr, "שגיאה: מספר אופרנדים שגוי להוראה\n");
+            return;
+        }
+
+        // בדיקת תקינות האופרנדים
+        char* operands[2] = {operand1, operand2};
+        for (int i = 0; i < operand_count; i++) {
+            if (!is_valid_operand(operands[i])) {
+                fprintf(stderr, "שגיאה: אופרנד לא חוקי\n");
+                return;
+            }
+            
+            if (!is_valid_addressing_mode(op, operands[i], i == 0)) {
+                fprintf(stderr, "שגיאה: שיטת מיעון לא חוקית לאופרנד %s\n", i == 0 ? "מקור" : "יעד");
+                return;
+            }
+            
+            if (operands[i][0] == '#' && !is_valid_immediate(operands[i])) {
+                fprintf(stderr, "שגיאה: ערך מיידי לא חוקי\n");
+                return;
+            }
+        }
+
+        // בדיקת הוראת STOP
+        /*if (strcmp(op, "stop") == 0) {
+            if (state->stop_encountered) {
+                fprintf(stderr, "שגיאה: הוראת STOP כבר הופיעה בקוד\n");
+                return;
+            }
+            state->stop_encountered = true;
+        }*/
+
+        // הרכבת ההוראה
         assemble_instruction(state, label, op, operand1, operand2);
     }
+
+    //state->line_count++;
 }
 
 void first_pass(AssemblerState* state, const char* filename) {
@@ -707,8 +778,8 @@ void print_extern_table(AssemblerState* state) {
     printf("Name\tAddress\n");
     for (int i = 0; i < state->extern_count; i++) {
 printf("%s\t", state->extern_table[i].name);
-if (state->extern_table[i].addresses != NULL) {
-    printf("%04d", state->extern_table[i].addresses[0]);
+if (state->extern_table[i].address != NULL) {
+    printf("%04d", state->extern_table[i].address);
 } else {
     printf("N/A");
 }
