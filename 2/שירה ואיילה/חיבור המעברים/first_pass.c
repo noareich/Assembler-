@@ -297,7 +297,8 @@ void handle_extern_directive(AssemblerState* state, const char* label) {
 
     strncpy(state->extern_table[state->extern_count].name, label, MAX_LABEL_LENGTH);
     state->extern_table[state->extern_count].name[MAX_LABEL_LENGTH] = '\0';
-state->extern_table[state->extern_count].address = NULL;  /* Initialize addresses to NULL */    state->extern_count++;
+    state->extern_table[state->extern_count].address = -1;  /* Initialize addresses to NULL */    
+    state->extern_count++;
 }
 int is_single_operand_instruction(const char *op) {
     const char *single_operand_instructions[] = {
@@ -605,10 +606,10 @@ void process_line(AssemblerState* state, char* line) {
             fprintf(stderr, "שגיאה: תווית לא חוקית\n");
             return;
         }
-        if (is_reserved_word(label)) {
+        /*if (is_reserved_word(label)) {
             fprintf(stderr, "שגיאה: שימוש במילה שמורה כתווית\n");
             return;
-        }
+        }*/
         if (is_duplicate_label(label, state)) {
             fprintf(stderr, "שגיאה: הגדרה כפולה של תווית\n");
             return;
@@ -620,11 +621,7 @@ void process_line(AssemblerState* state, char* line) {
 
     op = token;
 
-    // בדיקת תקינות ההוראה
-    if (!is_valid_instruction(op)) {
-        fprintf(stderr, "שגיאה: הוראה לא חוקית\n");
-        return;
-    }
+    
 
     // טיפול בהוראות מיוחדות
     if (op[0] == '.') {
@@ -646,7 +643,15 @@ void process_line(AssemblerState* state, char* line) {
             }
             handle_extern_directive(state, operand1);
         }
-    } else {
+    } 
+    else 
+    {
+        // בדיקת תקינות ההוראה
+        if (!is_valid_instruction(op)) {
+            printf("שגיאה: הוראה לא חוקית ");
+            printf("at op - %s\n", op);
+            return;
+        }
         // טיפול בהוראות רגילות
         operand1 = strtok(NULL, ",");
         operand2 = strtok(NULL, "");
@@ -778,7 +783,7 @@ void print_extern_table(AssemblerState* state) {
     printf("Name\tAddress\n");
     for (int i = 0; i < state->extern_count; i++) {
 printf("%s\t", state->extern_table[i].name);
-if (state->extern_table[i].address != NULL) {
+if (state->extern_table[i].address != -1) {
     printf("%04d", state->extern_table[i].address);
 } else {
     printf("N/A");
