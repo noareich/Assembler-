@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <limits.h>
+
+#include "check.h"
 
 #define MAX_LINE_LENGTH 81
 #define MAX_LABEL_LENGTH 31
@@ -46,14 +49,14 @@ bool is_entry_label_defined(const AssemblyState* state, const char* label);
 bool is_extern_label_not_defined(const AssemblyState* state, const char* label);
 
 /**
- * בודק אם אורך השורה תקין
+ * Checks if the line length is valid (<=MAX_LINE_LENGTH)
  */
 bool check_line_length(const char* line) {
     return strlen(line) <= MAX_LINE_LENGTH;
 }
 
 /**
- * בודק אם השורה ריקה או מכילה רק רווחים
+ * Checks if the line is empty or contains only whitespace
  */
 bool is_empty_or_whitespace(const char* line) {
     while (*line) {
@@ -65,14 +68,14 @@ bool is_empty_or_whitespace(const char* line) {
 }
 
 /**
- * בודק אם השורה היא הערה תקינה
+ * Checks if the line is a valid comment (starts with ';')
  */
 bool is_valid_comment(const char* line) {
     return line[0] == ';';
 }
 
 /**
- * בודק אם התווית תקינה
+ * Checks if the label is valid (starts with a letter, contains only alphanumeric characters, and <=MAX_LABEL_LENGTH)
  */
 bool is_valid_label(const char* label) {
     int len = 0;
@@ -89,7 +92,7 @@ bool is_valid_label(const char* label) {
 }
 
 /**
- * בודק אם המילה היא מילה שמורה
+ * Checks if the word is a reserved word
  */
 bool is_reserved_word(const char* word) {
     for (int i = 0; i < num_reserved_words; i++) {
@@ -100,7 +103,7 @@ bool is_reserved_word(const char* word) {
 }
 
 /**
- * בודק אם התווית כבר קיימת
+ * Checks if the label is already defined in the assembly state
  */
 bool is_duplicate_label(const char* label, const AssemblyState* state) {
     for (int i = 0; i < state->label_count; i++) {
@@ -112,14 +115,14 @@ bool is_duplicate_label(const char* label, const AssemblyState* state) {
 }
 
 /**
- * בודק אם ההוראה תקינה
+ * Checks if the instruction is valid (is a reserved word)
  */
 bool is_valid_instruction(const char* instruction) {
     return is_reserved_word(instruction);
 }
 
 /**
- * בודק אם המספר המיידי תקין
+ * Checks if the immediate operand is valid (-2078 <= value <= 2047)
  */
 bool is_valid_immediate(const char* operand) {
     char* endptr;
@@ -128,7 +131,7 @@ bool is_valid_immediate(const char* operand) {
 }
 
 /**
- * בודק אם מספר האופרנדים תקין להוראה
+ * Checks if the number of operands is correct for the given instruction
  */
 bool check_operand_count(const char* instruction, int operand_count) {
     if (strcmp(instruction, "mov") == 0 || strcmp(instruction, "cmp") == 0 ||
@@ -150,20 +153,16 @@ bool check_operand_count(const char* instruction, int operand_count) {
 }
 
 /**
- * בודק אם האופרנד תקין
+ * Checks if the operand is valid (immediate, register, or label)
  */
 bool is_valid_operand(const char* operand) {
     if (operand[0] == '#') {
-        char* endptr;
-        long value = strtol(operand + 1, &endptr, 10);
-        return *endptr == '\0' && value >= -2078 && value <= 2047;
+        return is_valid_immediate(operand);
     }
     
     if (operand[0] == '*') {
-        if (strlen(operand) == 2 && operand[1] == 'r') {
-            return true;
-        }
-        return strlen(operand) == 3 && operand[1] == 'r' && operand[2] >= '0' && operand[2] <= '7';
+        return (strlen(operand) == 2 && operand[1] == 'r') ||
+               (strlen(operand) == 3 && operand[1] == 'r' && operand[2] >= '0' && operand[2] <= '7');
     }
     
     if (operand[0] == 'r' && strlen(operand) == 2) {
@@ -174,7 +173,7 @@ bool is_valid_operand(const char* operand) {
 }
 
 /**
- * בודק אם שיטת המיעון תקינה להוראה ולאופרנד
+ * Checks if the addressing mode is valid for the given instruction and operand
  */
 bool is_valid_addressing_mode(const char* instruction, const char* operand, bool is_source) {
     bool is_immediate = (operand[0] == '#');
@@ -183,39 +182,37 @@ bool is_valid_addressing_mode(const char* instruction, const char* operand, bool
     bool is_direct = (!is_immediate && !is_direct_register && !is_indirect_register);
 
     if (strcmp(instruction, "lea") == 0) {
-        if (is_source)
-            return is_direct;
-        else
-            return !is_immediate;
+        return is_source ? is_direct : !is_immediate;
     }
     
-    if (strcmp(instruction, "cmp") == 0)
+    if (strcmp(instruction, "cmp") == 0) {
         return true;
+    }
     
     if (strcmp(instruction, "mov") == 0 || strcmp(instruction, "add") == 0 || strcmp(instruction, "sub") == 0) {
-        if (is_source)
-            return true;
-        else
-            return !is_immediate;
+        return is_source || !is_immediate;
     }
     
     if (strcmp(instruction, "clr") == 0 || strcmp(instruction, "not") == 0 ||
         strcmp(instruction, "inc") == 0 || strcmp(instruction, "dec") == 0 ||
-        strcmp(instruction, "red") == 0)
+        strcmp(instruction, "red") == 0) {
         return !is_immediate;
+    }
     
     if (strcmp(instruction, "jmp") == 0 || strcmp(instruction, "bne") == 0 ||
-        strcmp(instruction, "jsr") == 0)
+        strcmp(instruction, "jsr") == 0) {
         return is_direct || is_indirect_register;
+    }
     
-    if (strcmp(instruction, "prn") == 0)
+    if (strcmp(instruction, "prn") == 0) {
         return true;
+    }
 
     return false;
 }
 
 /**
- * מוסיף תווית למערכת
+ * Adds a label to the assembly state
  */
 void add_label(AssemblyState* state, const char* name, int address) {
     if (state->label_count < MAX_LABELS) {
@@ -229,7 +226,7 @@ void add_label(AssemblyState* state, const char* name, int address) {
 }
 
 /**
- * בודק אם התווית קיימת
+ * Checks if a label exists in the assembly state
  */
 bool label_exists(const AssemblyState* state, const char* name) {
     for (int i = 0; i < state->label_count; i++) {
@@ -241,7 +238,7 @@ bool label_exists(const AssemblyState* state, const char* name) {
 }
 
 /**
- * בודק אם התווית של entry תקינה (רק אותיות גדולות)
+ * Checks if the entry label is valid (contains only uppercase letters)
  */
 bool is_valid_entry_label(const char* label) {
     while (*label) {
@@ -254,31 +251,21 @@ bool is_valid_entry_label(const char* label) {
 }
 
 /**
- * בודק אם תווית ה-entry מוגדרת בקובץ
+ * Checks if the entry label is defined in the assembly state
  */
 bool is_entry_label_defined(const AssemblyState* state, const char* label) {
-    for (int i = 0; i < state->label_count; i++) {
-        if (strcmp(state->labels[i].name, label) == 0) {
-            return true;
-        }
-    }
-    return false;
+    return label_exists(state, label);
 }
 
 /**
- * בודק אם תווית ה-extern לא מוגדרת בקובץ
+ * Checks if the extern label is not defined in the assembly state
  */
 bool is_extern_label_not_defined(const AssemblyState* state, const char* label) {
-    for (int i = 0; i < state->label_count; i++) {
-        if (strcmp(state->labels[i].name, label) == 0) {
-            return false;
-        }
-    }
-    return true;
+    return !label_exists(state, label);
 }
 
 /**
- * מנתח שורה בודדת של קוד האסמבלי
+ * Analyzes a single line of assembly code
  */
 void analyze_line(const char* line, int line_number, AssemblyState* state) {
     char copy_line[MAX_LINE_LENGTH + 1];
@@ -291,39 +278,30 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
     while (end > trimmed_line && isspace(*end)) end--;
     *(end + 1) = '\0';
 
-    if (strlen(trimmed_line) > MAX_LINE_LENGTH) {
-        printf("שגיאה בשורה %d: אורך השורה חורג מהמותר\n", line_number);
+    if (!check_line_length(trimmed_line)) {
+        printf("Error in line %d: Line length exceeds the maximum allowed\n", line_number);
         return;
     }
 
-    if (trimmed_line[0] == '\0' || trimmed_line[0] == ';') {
+    if (is_empty_or_whitespace(trimmed_line) || is_valid_comment(trimmed_line)) {
         return;
     }
 
     char* token = strtok(trimmed_line, " \t");
     if (token == NULL) return;
 
-    // בדיקת הוראות .entry ו-.extern
-    if (strcmp(token, ".entry") == 0) {
+    // Check for .entry and .extern directives
+    if (strcmp(token, ".entry") == 0 || strcmp(token, ".extern") == 0) {
+        bool is_entry = (strcmp(token, ".entry") == 0);
         token = strtok(NULL, " \t");
-        if (token && is_valid_entry_label(token)) {
-            if (!is_entry_label_defined(state, token)) {
-                printf("שגיאה בשורה %d: תווית .entry אינה מוגדרת בקובץ\n", line_number);
+        if (token && (is_entry ? is_valid_entry_label(token) : is_valid_label(token))) {
+            if (is_entry && !is_entry_label_defined(state, token)) {
+                printf("Error in line %d: .entry label is not defined in the file\n", line_number);
+            } else if (!is_entry && !is_extern_label_not_defined(state, token)) {
+                printf("Error in line %d: .extern label is already defined in the file\n", line_number);
             }
         } else {
-            printf("שגיאה בשורה %d: תווית .entry לא תקינה\n", line_number);
-        }
-        return;
-    }
-
-    if (strcmp(token, ".extern") == 0) {
-        token = strtok(NULL, " \t");
-        if (token && is_valid_label(token)) {
-            if (!is_extern_label_not_defined(state, token)) {
-                printf("שגיאה בשורה %d: תווית .extern מוגדרת בקובץ\n", line_number);
-            }
-        } else {
-            printf("שגיאה בשורה %d: תווית .extern לא תקינה\n", line_number);
+            printf("Error in line %d: Invalid %s label\n", line_number, is_entry ? ".entry" : ".extern");
         }
         return;
     }
@@ -336,15 +314,15 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
         if (colon) *colon = '\0';
         
         if (!is_valid_label(label)) {
-            printf("שגיאה בשורה %d: תווית לא תקינה\n", line_number);
+            printf("Error in line %d: Invalid label\n", line_number);
             return;
         }
         if (is_reserved_word(label)) {
-            printf("שגיאה בשורה %d: שימוש במילה שמורה כתווית\n", line_number);
+            printf("Error in line %d: Reserved word used as label\n", line_number);
             return;
         }
         if (is_duplicate_label(label, state)) {
-            printf("שגיאה בשורה %d: הגדרה כפולה של תווית\n", line_number);
+            printf("Error in line %d: Duplicate label definition\n", line_number);
             return;
         }
         add_label(state, label, line_number);
@@ -357,13 +335,13 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
     instruction[MAX_LABEL_LENGTH] = '\0';
 
     if (!is_valid_instruction(instruction)) {
-        printf("שגיאה בשורה %d: הוראה לא תקינה\n", line_number);
+        printf("Error in line %d: Invalid instruction\n", line_number);
         return;
     }
 
     if (strcmp(instruction, "stop") == 0) {
         if (state->stop_encountered) {
-            printf("שגיאה בשורה %d: הוראת STOP כבר הופיעה קודם לכן\n", line_number);
+            printf("Error in line %d: STOP instruction already appeared\n", line_number);
             return;
         }
         state->stop_encountered = true;
@@ -374,7 +352,7 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
         while (isspace(*rest_of_line)) rest_of_line++;
         
         if (*rest_of_line == ',') {
-            printf("שגיאה בשורה %d: תו לא חוקי אחרי ההוראה\n", line_number);
+            printf("Error in line %d: Invalid character after instruction\n", line_number);
             return;
         }
     }
@@ -394,7 +372,7 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
             operand_count++;
 
             if (!is_valid_operand(operand)) {
-                printf("שגיאה בשורה %d: אופרנד לא תקין\n", line_number);
+                printf("Error in line %d: Invalid operand\n", line_number);
                 return;
             }
 
@@ -403,22 +381,22 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
     }
 
     if (!check_operand_count(instruction, operand_count)) {
-        printf("שגיאה בשורה %d: מספר אופרנדים שגוי להוראה\n", line_number);
+        printf("Error in line %d: Incorrect number of operands for instruction\n", line_number);
         return;
     }
 
     if (operand_count > 0 && !is_valid_addressing_mode(instruction, operands[0], true)) {
-        printf("שגיאה בשורה %d: שיטת מיעון לא חוקית לאופרנד מקור\n", line_number);
+        printf("Error in line %d: Invalid addressing mode for source operand\n", line_number);
         return;
     }
     if (operand_count > 1 && !is_valid_addressing_mode(instruction, operands[1], false)) {
-        printf("שגיאה בשורה %d: שיטת מיעון לא חוקית לאופרנד יעד\n", line_number);
+        printf("Error in line %d: Invalid addressing mode for destination operand\n", line_number);
         return;
     }
 
     for (int i = 0; i < operand_count; i++) {
         if (operands[i][0] == '#' && !is_valid_immediate(operands[i])) {
-            printf("שגיאה בשורה %d: מספר לא תקין בשיטת מיעון מיידי\n", line_number);
+            printf("Error in line %d: Invalid number in immediate addressing mode\n", line_number);
             return;
         }
     }
@@ -427,7 +405,7 @@ void analyze_line(const char* line, int line_number, AssemblyState* state) {
 }
 
 /**
- * פונקציית main - מנתחת את קובץ הקלט
+ * Main function - analyzes the input file
  */
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -453,8 +431,8 @@ int main(int argc, char* argv[]) {
 
     fclose(file);
 
-   if (!state.stop_encountered) {
-        printf("שגיאה: הוראת STOP לא נמצאה בקוד\n");
+    if (!state.stop_encountered) {
+        printf("Error: STOP instruction not found in the code\n");
     }
 
     return 0;
