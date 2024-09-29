@@ -45,3 +45,5 @@ Limitations
 The assembler follows the ANSI C90 standard
 Designed specifically for the custom assembly language defined in the project specifications
 May have limitations on input file size and number of symbols
+
+# developed by Noa Reich and Leli Vexler.
